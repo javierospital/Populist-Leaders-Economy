@@ -1,4 +1,5 @@
-# Populist Leaders and the Economy: *Can Populism Ever Be Good Economics?*
+# Populist Leaders and the Economy:
+*Can Populism Ever Be Good Economics?*
 
 This repository contains the materials for our empirical extension of Funke et al. (2023), investigating whether populist leadership can sometimes yield positive long-term economic outcomes. We replicate and extend their Synthetic Control Method (SCM) analysis, focusing on cases of “democratic populism,” and test if institutional checks can mitigate populism’s economic costs.
 
