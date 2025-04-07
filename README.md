@@ -5,7 +5,7 @@ This repository contains the materials for our empirical extension of Funke et a
 The extension investigates whether certain populist leaders—classified as democratic populists—can generate positive long-run economic outcomes, in contrast to the general negative effects of populism found by Funke et al. (2023). Inspired by Rodrik (2018a), the motivation is to explore whether populism, when paired with strong democratic institutions, can lift policy constraints and foster economic growth. This idea is tested using historical cases such as Franklin D. Roosevelt (FDR), Alan García, and Luiz Inácio Lula da Silva.
 
 ### Average Economic Performance of Democratic Populists
-![Average GDP Gap](Extension/Figures/main_plot_gaps.png)
+<img src="Extension/Figures/main_plot_gaps.png" alt="Average GDP Gap" width="500"/>
 This figure shows the average GDP gap between treated countries and their synthetic controls.
 
 While results for FDR confirm robust post-treatment performance, the method fails to produce credible synthetic controls for Lula and García due to poor pre-treatment fit. This highlights limitations in the donor pool and underscores the difficulty of evaluating populist regimes in Latin America using existing cross-country data. 
