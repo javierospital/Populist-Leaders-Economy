@@ -6,9 +6,9 @@ The extension investigates whether certain populist leaders—classified as demo
 
 ### Average Economic Performance of Democratic Populists
 
-This figure shows the average GDP gap between treated countries and their synthetic controls, indicating potential positive long-run effects of democratic populism.
+This figure shows the average GDP gap between treated countries and their synthetic controls.
 
-![Average GDP Gap](Extension/Figures/average_gap_democratic_populists.png)
+![Average GDP Gap](Extension/Figures/main_plot_gaps.png)
 
 ## Contents
 
