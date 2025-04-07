@@ -15,7 +15,7 @@ While results for FDR confirm robust post-treatment performance, the method fail
 ![FDR](Extension/Figures/fdr_gap_plot.png)
 This figure shows  GDP gap between the US and its synthetic control.
 
-While FDR shows a clear positive deviation from his synthetic counterfactual, the cases of Lula and García do not yield valid inferences due to poor pre-treatment fit. This suggests that synthetic control may be less effective in contexts where country-specific shocks or limited donor pools constrain the construction of credible counterfactuals. We also find that the results on the case of FDR are robust to falsification exercises. 
+While FDR shows a clear positive deviation from his synthetic counterfactual, the cases of Lula and García do not yield valid inferences due to poor pre-treatment fit. This suggests that synthetic control may be less effective in contexts where country-specific shocks or limited donor pools constrain the construction of credible counterfactuals. We also find that the results on the case of FDR are robust to country-placebo and time-placebo falsification exercises. 
 
 ## Contents
 
