@@ -6,16 +6,19 @@ This repository contains the materials for our empirical extension of Funke et a
 
 The extension investigates whether certain populist leaders—classified as democratic populists—can generate positive long-run economic outcomes, in contrast to the general negative effects of populism found by Funke et al. (2023). Inspired by Rodrik (2018a), the motivation is to explore whether populism, when paired with strong democratic institutions, can lift policy constraints and foster economic growth. This idea is tested using historical cases such as Franklin D. Roosevelt (FDR), Alan García, and Luiz Inácio Lula da Silva.
 
+
 <div align="center">
   <img src="Extension/Figures/main_plot_gaps.png" alt="Average GDP Gap" width="500"/>
 </div>  
 The figure above shows the average GDP gap between treated countries and their synthetic controls. While results for FDR confirm robust post-treatment performance, the method fails to produce credible synthetic controls for Lula and García due to poor pre-treatment fit. This highlights limitations in the donor pool and underscores the difficulty of evaluating populist regimes in Latin America using existing cross-country data. 
+
 
 <div align="center">
   <img src="Extension/Figures/fdr_gap_plot.png" alt="FDR Gap Plot" width="500"/>
 </div>
 
 This figure shows the GDP gap between the US and its synthetic control. While FDR shows a clear positive deviation from his synthetic counterfactual, the cases of Lula and García do not yield valid inferences due to poor pre-treatment fit. This suggests that synthetic control may be less effective in contexts where country-specific shocks or limited donor pools constrain the construction of credible counterfactuals. We also find that the results on the case of FDR are robust to country-placebo and time-placebo falsification exercises. 
+
 
 <div align="center">
   <div style="display: flex; justify-content: space-around;">
@@ -36,3 +39,11 @@ This figure shows the GDP gap between the US and its synthetic control. While FD
 ## Authors
 
 Michele Andreoni, Marta Cacopardo, Moritz Dassel, Javier Ospital
+
+## References
+
+Funke, M., Schularick, M., & Trebesch, C. (2023). Populist leaders and the economy. American Economic Review, 113(1), 324–359. https://doi.org/10.1257/aer.20200799
+
+Rodrik, D. (2018). Populism and the economics of globalization. Journal of International Business Policy, 1(1–2), 12–33. https://doi.org/10.1057/s42214-018-0001-4
+
+
