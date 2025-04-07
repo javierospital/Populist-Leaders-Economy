@@ -1,0 +1,979 @@
+---
+title: "PLE_Extension"
+author: "Javier Ospital, Michele Andreoni, Marta Cazzopardo, and Moritz Dassel"
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load-libraries, include=FALSE}
+
+library(Synth)
+library(haven)  
+library(dplyr)
+library(ggplot2)
+library(countrycode)
+library(tidyr)
+library(gridExtra)
+
+```
+------------------------------------------------------------------------
+#  1: The Synthetic Control Approach
+The **synthetic control method (SCM)** creates a counterfactual by constructing a weighted combination of control units (countries without a similar leader) to estimate what would have happened in the absence of FDR.
+### Funke et al. (2023) Methodology
+-   Uses **Abadie, Diamond, and Hainmueller (2010)** SCM framework.
+-   Estimates **GDP per capita impact** of populist leaders.
+-   Matches on **real GDP per capita**, **institutional quality**, and **crisis history**.
+
+------------------------------------------------------------------------
+#. 2: Defining Democratic-Populists
+First, we lists all the populists the populists episodes considered by the authors. The following were manually extracted from Table 1 in Funke et. al (2023). 
+```{r define_populist_episodes} 
+
+populist_episodes <- tribble(
+  ~leader, ~country, ~iso, ~start_year, ~end_year,
+  # Argentina (PWT covers Argentina: "ARG")
+   "Hipólito Yrigoyen", "Argentina", "ARG", 1928, 1930,
+  "Juan Perón",         "Argentina", "ARG", 1946, 1955,
+  "Perón–Martínez",     "Argentina", "ARG", 1973, 1976,
+  "Carlos Menem",       "Argentina", "ARG", 1989, 1999,
+  "Néstor Kirchner",    "Argentina", "ARG", 2003, 2007,
+  "Cristina Fernández", "Argentina", "ARG", 2008, 2015,
+  
+  # Bolivia ("BOL")
+  "Estenssoro–Zuazo",   "Bolivia",   "BOL", 1952, 1964,
+  "Evo Morales",        "Bolivia",   "BOL", 2006, 2019,
+  
+  # Brazil ("BRA")
+  "Getúlio Vargas",     "Brazil",    "BRA", 1930, 1945,
+  "Getúlio Vargas",     "Brazil",    "BRA", 1951, 1954,
+  "Fernando Collor",    "Brazil",    "BRA", 1990, 1992,
+  "Jair Bolsonaro",     "Brazil",    "BRA", 2019, 2023,
+  
+  # Bulgaria ("BGR")
+  "Boyko Borissov",     "Bulgaria",  "BGR", 2009, 2021,
+  
+  # Chile ("CHL")
+  "Alessandri–Ibáñez",   "Chile",     "CHL", 1920, 1938,
+  "Carlos Ibáñez",       "Chile",     "CHL", 1952, 1958,
+  
+  # Ecuador ("ECU")
+  "José Velasco",       "Ecuador",   "ECU", 1934, 1935,
+  "José Velasco",       "Ecuador",   "ECU", 1944, 1947,
+  "José Velasco",       "Ecuador",   "ECU", 1952, 1956,
+  "José Velasco",       "Ecuador",   "ECU", 1960, 1961,
+  "José Velasco",       "Ecuador",   "ECU", 1968, 1972,
+  "Abdalá Bucaram",     "Ecuador",   "ECU", 1996, 1997,
+  "Rafael Correa",      "Ecuador",   "ECU", 2007, 2017,
+  
+  # Germany ("DEU")
+  "Adolf Hitler",       "Germany",   "DEU", 1933, 1945,
+  
+  # Greece ("GRC")
+  "Alexis Tsipras",      "Greece",    "GRC", 2015, 2019,
+  
+  # Hungary ("HUN")
+  "Viktor Orbán",       "Hungary",   "HUN", 2010, 2024,
+  
+  # India ("IND")
+  "Indira Gandhi",      "India",     "IND", 1966, 1977,
+  "Narendra Modi",      "India",     "IND", 2014, 2024,
+  
+  # Indonesia ("IDN")
+  "Sukarno",            "Indonesia", "IDN", 1945, 1966,
+  "Joko Widodo",        "Indonesia", "IDN", 2014, 2024,
+  
+  # Israel ("ISR")
+  "Benjamin Netanyahu", "Israel",    "ISR", 1996, 1999,
+  "Benjamin Netanyahu", "Israel",    "ISR", 2009, 2024,
+  
+  # Italy ("ITA")
+  "Benito Mussolini",   "Italy",     "ITA", 1922, 1943,
+  "Silvio Berlusconi",  "Italy",     "ITA", 1994, 1995,
+  "Silvio Berlusconi",  "Italy",     "ITA", 2001, 2011,
+  "Lega/M5S",          "Italy",     "ITA", 2018, 2022,
+  
+  # Japan ("JPN")
+  "Junichiro Koizumi",   "Japan",     "JPN", 2001, 2006,
+  
+  # Mexico ("MEX")
+  "Lázaro Cárdenas",    "Mexico",    "MEX", 1934, 1940,
+  "Luis Echeverría",    "Mexico",    "MEX", 1970, 1976,
+  "Andrés Manuel López Obrador", "Mexico", "MEX", 2018, 2024,
+  
+  # New Zealand ("NZL")
+  "Robert Muldoon",     "New Zealand","NZL", 1975, 1984,
+  
+  # Peru ("PER")
+  "Alan García",        "Peru",      "PER", 1985, 1990,
+  "Alberto Fujimori",   "Peru",      "PER", 1990, 2000,
+  
+  # Philippines ("PHL")
+  "Joseph Estrada",     "Philippines","PHL", 1998, 2001,
+  "Rodrigo Duterte",    "Philippines","PHL", 2016, 2024,
+  
+  # Poland ("POL")
+  "Kaczyński/PiS",      "Poland",    "POL", 2005, 2007,
+  "PiS (J. Kaczyński)", "Poland",    "POL", 2015, 2023,
+  
+  # Slovakia ("SVK")
+  "Mečiar",             "Slovakia",  "SVK", 1990, 1998,
+  "Fico",               "Slovakia",  "SVK", 2006, 2018,
+  
+  # South Africa ("ZAF")
+  "Jacob Zuma",         "South Africa", "ZAF", 2009, 2018,
+  
+  # South Korea ("KOR")
+  "Roh Moo-hyun",       "South Korea", "KOR", 2003, 2008,
+  
+  # Taiwan ("TWN")
+  "Chen Shui-Bian",     "Taiwan",    "TWN", 2000, 2008,
+  
+  # Thailand ("THA")
+  "Thaksin Shinawatra", "Thailand",  "THA", 2001, 2006,
+  
+  # Turkey ("TUR")
+  "Recep Tayyip Erdoğan", "Turkey",  "TUR", 2003, 2024,
+  
+  # United Kingdom ("GBR")
+  "Boris Johnson",      "United Kingdom", "GBR", 2019, 2022,
+  
+  # United States ("USA")
+  "Donald Trump",       "United States", "USA", 2017, 2021,
+  
+  # Venezuela ("VEN")
+  "Hugo Chávez",        "Venezuela", "VEN", 1999, 2013, 
+  "Nicolás Maduro",     "Venezuela", "VEN", 2014, 2024
+)
+
+```
+Now, create a democratic_populists dataframe – these are a set of leaders who combined populist rhetoric with democratic commitment (Rodrik, 2018). 
+```{r define_dem_populist_episodes  }
+
+dem_populist_episodes <- tribble(
+  ~leader, ~country, ~iso, ~start_year, ~end_year,
+  # Argentina
+  "Hipólito Yrigoyen", "Argentina", "ARG", 1916, 1922,
+  "Hipólito Yrigoyen", "Argentina", "ARG", 1928, 1930,
+  "Néstor Kirchner", "Argentina", "ARG", 2003, 2007,
+  # Mexico
+  "Lázaro Cárdenas", "Mexico", "MEX", 1934, 1940,
+  "Andrés Manuel López Obrador", "Mexico", "MEX", 2018, 2024,
+  # United States
+  "Franklin D. Roosevelt", "United States", "USA", 1933, 1945,
+  # Brazil
+  #"Getúlio Vargas", "Brazil", "BRA", 1930, 1945,
+  #"Getúlio Vargas", "Brazil", "BRA", 1951, 1954,
+  #"Lula da Silva", "Brazil", "BRA", 2003, 2011,
+  # Chile
+  "Salvador Allende", "Chile", "CHL", 1970, 1973,
+  # Peru
+  "Alan García", "Peru", "PER", 1985, 1990,  # First term only
+  # Venezuela
+  #"Hugo Chávez", "Venezuela", "VEN", 1999, 2013,
+  # Ecuador
+  "Rafael Correa", "Ecuador", "ECU", 2007, 2017,
+  # Bolivia
+  "Evo Morales", "Bolivia", "BOL", 2006, 2019
+)
+
+# Print the updated list
+print(dem_populist_episodes)
+
+```
+Emulating Funke et al. (2023), we are interested in running synthetic control analyses for cases of these democratic populist episodes, excluding populist episodes form the control database. 
+
+------------------------------------------------------------------------
+#  3: Identify the Required Data and Descriptive Statistics
+### Primary Data Sources
+1.  **Macroeconomic Data (GDP, Inflation, Debt, etc.)**
+    -   **Jord**\u00e0-Schularick-Taylor Macrohistory Database (`JSTdatasetR4.dta`)
+        -   Download: <https://www.macrohistory.net/data/>
+    -   **Penn World Table** (`pwt91.dta`)
+        -   Download: <https://www.rug.nl/ggdc/productivity/pwt/>
+2.  **Institutional and Political Data**
+    -   **Varieties of Democracy** (`V-Dem-CY-Full+Others-v12.dta`)
+        -   Download: <https://v-dem.net/>
+3.  **Crisis History Data**
+    -   **Reinhart-Rogoff Financial Crises Dataset** (`Varieties_crises_CR_Update2015.dta`)
+        -   Download: <https://www.hbs.edu/behavioral-finance-and-financial-stability/data/>
+
+Now, we can verify whether democratic populists are indeed associated to a positive increase in democracy and institutional quality indicators, relative to the entire pool of populists identified in Funke et al. (2023). 
+
+```{r democratic_performance-of-dem-populists  }
+
+vdem_data <- read_dta("/Users/javieroctavioospitalgreslebin/Mac/Desktop/Political Economy/PLE/data/V-Dem-CY-Full+Others-v12.dta")
+
+dem_populist <- tribble(
+  ~leader, ~country, ~iso, ~start_year, ~end_year,
+  # Argentina
+  "Hipólito Yrigoyen", "Argentina", "ARG", 1916, 1922,
+  "Hipólito Yrigoyen", "Argentina", "ARG", 1928, 1930,
+  "Néstor Kirchner", "Argentina", "ARG", 2003, 2007,
+  # Mexico
+  #"Lázaro Cárdenas", "Mexico", "MEX", 1934, 1940,
+  "Andrés Manuel López Obrador", "Mexico", "MEX", 2018, 2024,
+  # United States
+  "Franklin D. Roosevelt", "United States", "USA", 1933, 1945,
+  # Brazil
+  #"Getúlio Vargas", "Brazil", "BRA", 1930, 1945,
+  #"Getúlio Vargas", "Brazil", "BRA", 1951, 1954,
+  "Lula da Silva", "Brazil", "BRA", 2003, 2011,
+  # Chile
+  "Salvador Allende", "Chile", "CHL", 1970, 1973,
+  # Peru
+  "Alan García", "Peru", "PER", 1985, 1990,  # First term only
+  # Venezuela
+  #"Hugo Chávez", "Venezuela", "VEN", 1999, 2013,
+  # Ecuador
+  "Rafael Correa", "Ecuador", "ECU", 2007, 2017,
+  # Bolivia
+  "Evo Morales", "Bolivia", "BOL", 2006, 2019
+)
+
+# Ensure country names match before joining
+dem_populist <- dem_populist %>%
+  rename(country_name = country)  # Rename 'country' to match vdem_data
+
+# Compute Pre-Populist and In-Office Democracy Scores
+dem_populist_changes <- dem_populist %>%
+  left_join(vdem_data, by = "country_name") %>% 
+  mutate(period = case_when(
+    year < start_year ~ "before",  # Years before taking office
+    year >= start_year & year <= end_year ~ "during",  # Years in office
+    TRUE ~ NA_character_
+  )) %>%
+  filter(!is.na(period)) %>%
+  group_by(leader, period) %>%
+  summarise(
+    free_elections = mean(v2xel_frefair, na.rm = TRUE),
+    judicial_independence = mean(v2x_jucon, na.rm = TRUE),
+    media_freedom = mean(v2xme_altinf, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from = period,
+    values_from = c(free_elections, judicial_independence, media_freedom)
+  ) %>%
+  mutate(
+    change_free_elections = free_elections_during - free_elections_before,
+    change_judicial_independence = judicial_independence_during - judicial_independence_before,
+    change_media_freedom = media_freedom_during - media_freedom_before
+  ) %>%
+  select(leader, change_free_elections, change_judicial_independence, change_media_freedom)
+
+# Compute the Average Change Across All Democratic Populists
+avg_dem_populist_changes <- dem_populist_changes %>%
+  summarise(
+    avg_change_free_elections = mean(change_free_elections, na.rm = TRUE),
+    avg_change_judicial_independence = mean(change_judicial_independence, na.rm = TRUE),
+    avg_change_media_freedom = mean(change_media_freedom, na.rm = TRUE)
+  )
+
+# Print Results
+print(dem_populist_changes)  # Changes per leader
+print(avg_dem_populist_changes)  # Average across all democratic populists
+```
+```{r democratic_performance-of-all-populists  }
+# Ensure country names in V-Dem match those in populist_episodes
+populist_episodes <- populist_episodes %>%
+  mutate(country_name = countrycode(country, origin = "country.name", destination = "country.name"))
+
+# Merge with V-Dem data, ensuring only relevant years are included
+all_populist_scores <- populist_episodes %>%
+  left_join(vdem_data, by = "country_name") %>%  # Join on country_name
+  filter(year >= start_year & year <= end_year) %>%  # Filter only relevant years
+  select(v2xel_frefair, v2x_jucon, v2xme_altinf) %>%
+  summarise(
+    avg_free_elections = mean(v2xel_frefair, na.rm = TRUE),
+    avg_judicial_independence = mean(v2x_jucon, na.rm = TRUE),
+    avg_media_freedom = mean(v2xme_altinf, na.rm = TRUE)
+  )
+
+print(all_populist_scores)
+```
+
+------------------------------------------------------------------------
+#  4: Synthetic Control Methods (SCM) by Case
+
+## ------------------------------------------------------------------------ 
+## Case 1: Franklin Delano Roosevelt (FDR) (1933-1945, United States, USA)
+## ------------------------------------------------------------------------ 
+# ---  Step 1: Load Data in R --- 
+
+```{r Load data  }
+
+# Load Macroeconomic Data
+jst_data <- read_dta("/Users/javieroctavioospitalgreslebin/Mac/Desktop/Political Economy/PLE/data/JSTdatasetR4.dta")
+pwt_data <- read_dta("/Users/javieroctavioospitalgreslebin/Mac/Desktop/Political Economy/PLE/data/pwt91.dta")
+
+#Load Institutional and Political Data
+vdem_data <- read_dta("/Users/javieroctavioospitalgreslebin/Mac/Desktop/Political Economy/PLE/data/V-Dem-CY-Full+Others-v12.dta")
+
+#Load Crisis Data
+crisis_data <- read_dta("/Users/javieroctavioospitalgreslebin/Mac/Desktop/Political Economy/PLE/data/Varieties_crises_CR_Update2015.dta")
+```
+
+------------------------------------------------------------------------
+
+# ---  Step 2: Select the Treatment Unit (FDR) ---
+
+```{r select treatment unit}
+# Filter GDP Data for the USA
+usa_gdp <- jst_data %>%
+  filter(iso == "USA", year >= 1910, year <= 1960) %>%
+  select(year, rgdppc)
+
+# Filter Institutional Quality Data
+usa_vdem <- vdem_data %>%
+  filter(country_name == "United States of America", year >= 1910, year <= 1960) %>%
+  select(year, v2xel_frefair, v2x_jucon, v2xme_altinf)  # Liberal democracy index
+
+# Filter Crisis Data
+crisis_data <- crisis_data %>% # Ensure correct column names before filtering
+  rename(country = c, year = y)  # Rename columns if needed
+
+usa_crisis <- crisis_data %>%
+  filter(country == "United States", year >= 1910, year <= 1960)
+
+# Merge Datasets
+fdr_data <- usa_gdp %>%
+  left_join(usa_vdem, by = "year") %>%
+  left_join(usa_crisis, by = "year")  
+print(fdr_data)
+
+```
+
+
+------------------------------------------------------------------------
+
+#  --- Step 3: Exclude Countries with Populist Leaders During 1933-1945  ---  
+
+```{r exclude-overlapping-countries}
+
+populist_during_fdr <- populist_episodes %>%
+  filter(start_year <= 1945 & end_year >= 1933) %>%
+  pull(iso) %>% unique()
+
+print("Excluded countries (populist leaders 1933-1945):")
+print(populist_during_fdr)
+```
+
+------------------------------------------------------------------------
+#  --- Step 4: Select Control Units (Excluding Populist Countries)  ---  
+```{r select-control-units, warning=FALSE}
+
+# Convert country names to ISO codes
+vdem_data <- vdem_data %>%
+  mutate(iso = countrycode(country_name, origin = "country.name", destination = "iso3c"))
+
+crisis_data <- crisis_data %>%
+  mutate(iso = countrycode(country, origin = "country.name", destination = "iso3c"))
+
+# Filter Data for Potential Control Countries (Excluding USA & Populists)
+control_data <- jst_data %>%
+  filter(iso != "USA", year >= 1910, year <= 1960, !iso %in% populist_during_fdr) %>%
+  select(iso, year, rgdppc) %>%
+  left_join(vdem_data, by = c("iso", "year")) %>%
+  left_join(crisis_data, by = c("iso", "year"))
+
+# Exclude countries that had populist leaders during FDR's tenure (1933-1945)
+#excluded_countries <- populist_episodes %>%
+#  filter(start_year <= 1945 & end_year >= 1933) %>%
+#  pull(iso) %>%
+#  unique()
+
+#control_data <- jst_data %>%
+#  filter(!(iso %in% excluded_countries), iso != "USA", year >= 1910, year <= 1960) %>%
+#  select(iso, year, rgdppc) %>%
+#  left_join(vdem_data, by = c("iso", "year")) %>%
+#  left_join(crisis_data, by = c("iso", "year"))
+
+
+print("Remaining control countries:")
+print(unique(control_data$iso))
+```
+
+------------------------------------------------------------------------
+
+#  --- Step 5: Prepare Data for Synth Package--- 
+```{r prepare-data-for-synth-FDR}
+# Create USA dataset
+treated_data <- jst_data %>%
+  filter(iso == "USA", year >= 1910, year <= 1960) %>%
+  select(iso, year, rgdppc) %>%
+  left_join(vdem_data, by = c("iso", "year")) %>%
+  left_join(crisis_data, by = c("iso", "year"))
+
+# Convert ISO to Numeric IDs
+control_data <- control_data %>%
+  mutate(unit_id = as.numeric(as.factor(iso)))
+
+dataprep_data <- bind_rows(treated_data, control_data) %>%
+  mutate(unit_id = as.numeric(as.factor(iso)))
+
+# Identify Treatment and Control IDs
+treatment.identifier <- unique(dataprep_data$unit_id[dataprep_data$iso == "USA"])
+controls.identifier <- setdiff(unique(dataprep_data$unit_id), treatment.identifier)
+
+# Force conversion to `data.frame`
+dataprep_data <- as.data.frame(dataprep_data)
+```
+
+------------------------------------------------------------------------
+
+#  --- Step 6: RunSynthetic Control Estimation  --- 
+
+```{r run-synth-FDR}
+
+dataprep.out <- dataprep(
+  foo = dataprep_data,
+  predictors = c("rgdppc", "v2xel_frefair", "v2x_jucon", "v2xme_altinf"),
+  dependent = "rgdppc",
+  unit.variable = "unit_id",
+  time.variable = "year",
+  treatment.identifier = treatment.identifier,
+  controls.identifier = controls.identifier,
+  time.predictors.prior = 1910:1932,
+  time.optimize.ssr = 1910:1932,
+  unit.names.variable = "iso",
+  time.plot = 1910:1960
+)
+
+synth.out <- synth(dataprep.out)
+```
+
+------------------------------------------------------------------------
+
+#  --- Step 7: Visualize Results --- 
+
+```{r prepare-data-for-synth}
+
+path.plot(synth.out, dataprep.out, Ylab = "GDP per capita", Xlab = "Year", Legend.position = "bottomright")
+
+```
+
+
+
+------------------------------------------------------------------------
+
+#  --- Step 8: Assess the Quality of the Synthetic Control  ---  
+
+```{r Assess the Quality}
+synth.tables <- synth.tab(dataprep.res = dataprep.out, synth.res = synth.out)
+print(synth.tables)
+```
+
+
+------------------------------------------------------------------------
+
+#  --- Step 9: Save results for FDR ---
+```{r save_results_fdr}
+
+# Extract real and synthetic GDP per capita
+fdr_results <- data.frame(
+  year = dataprep.out$tag$time.plot,
+  actual = dataprep.out$Y1plot,
+  synthetic = dataprep.out$Y0plot %*% synth.out$solution.w,
+  gap = dataprep.out$Y1plot - (dataprep.out$Y0plot %*% synth.out$solution.w)
+)
+
+# Store predictor weights
+fdr_predictor_weights <- data.frame(
+  predictor = rownames(synth.out$solution.v),
+  weight = synth.out$solution.v
+)
+
+# Store country weights for synthetic control
+fdr_country_weights <- data.frame(
+  country = dataprep.out$tag$unit.names[dataprep.out$tag$controls.identifier],
+  weight = synth.out$solution.w
+)
+```
+------------------------------------------------------------------------
+## ----------------------------------------------
+## Case 2: Lula da Silva (2003-2011, Brazil, BRA)
+## ----------------------------------------------
+#  ---  Step 1: Load Data (PWT)  --- 
+```{r load-pwt-data }
+
+# Load Macroeconomic Data
+pwt_data <- read_dta("/Users/javieroctavioospitalgreslebin/Mac/Desktop/Political Economy/pwt1001.dta")
+
+# Compute Real GDP per Capita (rgdppc)
+pwt_data <- pwt_data %>%
+  mutate(rgdppc = rgdpo / pop)
+```
+------------------------------------------------------------------------
+#  ---  Step 2: Select the Treatment Unit (Lula da Silva) --- 
+```{r select-treatment-lula}
+
+# Filter GDP Data for Brazil
+brazil_gdp <- pwt_data %>%
+  filter(countrycode == "BRA", year >= 1990, year <= 2020) %>%
+  select(year, rgdppc)
+
+# Filter Institutional Quality Data
+brazil_vdem <- vdem_data %>%
+  filter(country_name == "Brazil", year >= 1990, year <= 2020) %>%
+  select(year, v2xel_frefair, v2x_jucon, v2xme_altinf)  # Liberal democracy index
+
+brazil_crisis <- crisis_data %>%
+  filter(country == "Brazil", year >= 1990, year <= 2020)
+
+# Merge Datasets
+lula_data <- brazil_gdp %>%
+  left_join(brazil_vdem, by = "year") %>%
+  left_join(brazil_crisis, by = "year")  
+
+# Fill missing ISO codes
+lula_data <- lula_data %>%
+  mutate(iso = ifelse(is.na(iso), "BRA", iso))
+```
+------------------------------------------------------------------------
+#  ---  Step 3: Exclude Countries with Populist Leaders During Lula’s Tenure (2003-2011)
+
+```{r exclude-populists-lula}
+
+populist_during_lula <- populist_episodes %>%
+  filter(start_year <= 2011 & end_year >= 2003) %>%
+  pull(iso) %>% unique()
+
+print("Excluded countries (populist leaders 2003-2011):")
+print(populist_during_lula)
+```
+------------------------------------------------------------------------
+#  ---  Step 4: Select Control Units
+
+```{r select-control-lula}
+
+control_data <- pwt_data %>%
+  rename(iso = countrycode) %>%  # Ensure consistency in column names
+  filter(!(iso %in% populist_during_lula), iso != "BRA", year >= 1990, year <= 2020) %>%
+  select(iso, year, rgdppc) %>%
+  left_join(vdem_data, by = c("iso", "year")) %>%
+  left_join(crisis_data, by = c("iso", "year"))
+
+print("Remaining control countries:")
+print(unique(control_data$iso))
+```
+------------------------------------------------------------------------
+#  ---  Step 5: Prepare Data for the Synth Package
+
+```{r prepare-data-synth-lula}
+
+# Convert ISO to Numeric IDs
+control_data <- control_data %>%
+  mutate(unit_id = as.numeric(as.factor(iso)))
+
+dataprep_data <- bind_rows(lula_data, control_data) %>%
+  mutate(unit_id = as.numeric(as.factor(iso)))
+
+treatment.identifier <- unique(dataprep_data$unit_id[dataprep_data$iso == "BRA"])
+controls.identifier <- setdiff(unique(dataprep_data$unit_id), treatment.identifier)
+
+dataprep_data <- as.data.frame(dataprep_data)
+```
+
+```{r balance-panel-lula}
+
+dataprep_data <- dataprep_data %>%
+  complete(iso, year = 1990:2020, fill = list(rgdppc = NA, v2xel_frefair = NA, v2x_jucon = NA, v2xme_altinf = NA))
+
+dataprep_data <- dataprep_data %>%
+  group_by(iso) %>%
+  arrange(year) %>%
+  fill(rgdppc, v2xel_frefair, v2x_jucon, v2xme_altinf, .direction = "downup")
+
+# Remove PSE from the dataset
+dataprep_data <- dataprep_data %>%
+  filter(iso != "PSE")
+```
+
+```{r ensure-unit-id-is-numerc}
+
+dataprep_data %>%
+  group_by(iso) %>%
+  summarise(min_year = min(year), max_year = max(year), count = n()) %>%
+  arrange(min_year)
+
+length(unique(dataprep_data$unit_id)) == nrow(dataprep_data)
+
+table(dataprep_data$iso)
+
+dataprep_data <- dataprep_data %>%
+  filter(!is.na(rgdppc) & !is.na(v2xel_frefair) & !is.na(v2x_jucon) & !is.na(v2xme_altinf))
+
+dataprep_data <- as.data.frame(dataprep_data)
+dataprep_data$unit_id <- as.numeric(dataprep_data$unit_id)
+
+dataprep_data %>%
+  filter(iso == "BRA") %>%
+  distinct(unit_id)
+
+treatment.identifier <- unique(dataprep_data$unit_id[dataprep_data$iso == "BRA"])[1]  # Keep first value
+print(treatment.identifier)  # Should be a single numeric value
+
+
+# Convert ISO to Numeric IDs
+control_data <- control_data %>%
+  mutate(unit_id = as.numeric(as.factor(iso)))
+
+dataprep_data <- bind_rows(treated_data, control_data) %>%
+  mutate(unit_id = as.numeric(as.factor(iso)))
+
+# Identify Treatment and Control IDs
+treatment.identifier <- unique(dataprep_data$unit_id[dataprep_data$iso == "USA"])
+controls.identifier <- setdiff(unique(dataprep_data$unit_id), treatment.identifier)
+
+# Force conversion to `data.frame`
+dataprep_data <- as.data.frame(dataprep_data)
+
+
+dataprep_data %>%
+  filter(iso == "BRA") %>%
+  distinct(unit_id)
+
+
+dataprep_data <- dataprep_data %>%
+  filter(!is.na(rgdppc) & 
+         !is.na(v2xel_frefair) & 
+         !is.na(v2x_jucon) & 
+         !is.na(v2xme_altinf))
+
+dataprep_data <- dataprep_data %>%
+  group_by(iso) %>%
+  filter(all(!is.na(rgdppc)) & 
+         all(!is.na(v2xel_frefair)) & 
+         all(!is.na(v2x_jucon)) & 
+         all(!is.na(v2xme_altinf))) %>%
+  ungroup()
+
+colSums(is.na(dataprep_data))  # Should now return all zeros
+
+# Ensure Brazil is in the dataset
+dataprep_data <- bind_rows(dataprep_data, lula_data)
+
+dataprep_data %>%
+  filter(iso == "BRA")
+
+dataprep_data <- dataprep_data %>%
+  mutate(unit_id = ifelse(iso == "BRA", 999, unit_id))  # Assign Brazil a clear unique ID
+
+dataprep_data %>%
+  filter(iso == "BRA") %>%
+  distinct(unit_id)
+
+# Ensure unit_id is numeric
+dataprep_data <- dataprep_data %>%
+  mutate(unit_id = as.numeric(unit_id))
+
+# Verify data structure
+str(dataprep_data$unit_id)
+
+
+# Check if unit_id is numeric and has no missing values
+print(class(dataprep_data$unit_id))  # Should return "numeric"
+print(any(is.na(dataprep_data$unit_id)))  # Should return FALSE
+print(unique(dataprep_data$unit_id))  # Should show a set of unique numbers
+
+print(colnames(dataprep_data))  # Ensure "unit_id" is exactly as expected
+
+colnames(dataprep_data) <- trimws(colnames(dataprep_data))
+
+
+dataprep_data <- dataprep_data %>%
+  mutate(unit_id = as.numeric(as.character(unit_id)))
+
+# Verify again
+print(class(dataprep_data$unit_id))  # Should return "numeric"
+print(any(is.na(dataprep_data$unit_id)))  # Should return FALSE
+print(unique(dataprep_data$unit_id))  # Should be a numeric set
+
+# IS the chunk below what works?
+dataprep_data %>%
+  group_by(iso) %>%
+  summarise(n = n_distinct(unit_id)) %>%
+  filter(n > 1)
+
+dataprep_data <- dataprep_data %>%
+  select(iso, year, rgdppc, v2xel_frefair, v2x_jucon, v2xme_altinf, unit_id)
+
+print(colnames(dataprep_data))  # Ensure "unit_id" is in the list
+
+dataprep_data <- as.data.frame(dataprep_data)
+
+dataprep_data %>%
+  group_by(unit_id) %>%
+  summarise(min_year = min(year), max_year = max(year), count = n()) %>%
+  arrange(min_year)
+
+
+dataprep_data %>%
+  group_by(unit_id) %>%
+  summarise(min_year = min(year), max_year = max(year), count = n()) %>%
+  arrange(count)
+
+full_units <- dataprep_data %>%
+  group_by(unit_id) %>%
+  summarise(count = n()) %>%
+  filter(count == 30) %>%
+  pull(unit_id)
+
+dataprep_data <- dataprep_data %>%
+  filter(unit_id %in% full_units)
+```
+
+------------------------------------------------------------------------
+#  ---  Step 6: Run Synthetic Control Estimation
+```{r run-synth-lula}
+
+treatment.identifier <- unique(dataprep_data$unit_id[dataprep_data$iso == "BRA"])
+print(treatment.identifier)  # Should return 999
+
+controls.identifier <- setdiff(unique(dataprep_data$unit_id), treatment.identifier)
+print(controls.identifier)  # Should exclude 999
+
+dataprep.out <- dataprep(
+  foo = dataprep_data,
+  predictors = c("rgdppc", "v2xel_frefair", "v2x_jucon", "v2xme_altinf"),
+  dependent = "rgdppc",
+  unit.variable = "unit_id",
+  time.variable = "year",
+  treatment.identifier = treatment.identifier,
+  controls.identifier = controls.identifier,
+  time.predictors.prior = 1990:2002,
+  time.optimize.ssr = 1990:2002,
+  unit.names.variable = "iso",
+  time.plot = 1990:2019
+)
+synth.out <- synth(dataprep.out)
+
+```
+
+
+------------------------------------------------------------------------
+#  ---  Step 7: Visualize Results
+```{r vidualize-results-lula}
+path.plot(synth.out, dataprep.out, Ylab = "GDP per capita", Xlab = "Year", Legend.position = "bottomright")
+```
+#  ---  Step 8: Save Results
+```{r save_results_lula}
+
+# Extract real and synthetic GDP per capita
+lula_results <- data.frame(
+  year = dataprep.out$tag$time.plot,
+  actual = dataprep.out$Y1plot,
+  synthetic = dataprep.out$Y0plot %*% synth.out$solution.w,
+  gap = dataprep.out$Y1plot - (dataprep.out$Y0plot %*% synth.out$solution.w)
+)
+
+# Store predictor weights
+lula_predictor_weights <- data.frame(
+  predictor = rownames(synth.out$solution.v),
+  weight = synth.out$solution.v
+)
+
+# Store country weights for synthetic control
+lula_country_weights <- data.frame(
+  country = dataprep.out$tag$unit.names[dataprep.out$tag$controls.identifier],
+  weight = synth.out$solution.w
+)
+```
+
+------------------------------------------------------------------------
+## ----------------------------------------------
+## Case 3: Alan García (1985-1990, Peru, PER)
+## ----------------------------------------------
+# --- Step 1: Load Data (PWT) ---
+```{r re-load-pwt-data }
+
+# Load Macroeconomic Data
+pwt_data <- read_dta("/Users/javieroctavioospitalgreslebin/Mac/Desktop/Political Economy/pwt1001.dta")
+
+# Compute Real GDP per Capita (rgdppc)
+pwt_data <- pwt_data %>%
+  mutate(rgdppc = rgdpo / pop)
+```
+
+# --- Step 2: Select the Treatment Unit (Alan García) ---
+```{r selsct-treatment-garcia }
+# Filter GDP Data for Peru
+peru_gdp <- pwt_data %>%
+  filter(countrycode == "PER", year >= 1975, year <= 2000) %>%
+  select(year, rgdppc)
+
+# Filter Institutional Quality Data
+peru_vdem <- vdem_data %>%
+  filter(country_name == "Peru", year >= 1975, year <= 2000) %>%
+  select(year, v2xel_frefair, v2x_jucon, v2xme_altinf)
+
+# Filter Economic Crisis Data for Peru
+peru_crisis <- crisis_data %>%
+  filter(country == "Peru", year >= 1975, year <= 2000)
+
+# Merge Datasets
+garcia_data <- peru_gdp %>%
+  left_join(peru_vdem, by = "year") %>%
+  left_join(peru_crisis, by = "year")
+
+# Fill missing ISO codes
+garcia_data <- garcia_data %>%
+  mutate(iso = ifelse(is.na(iso), "PER", iso))
+```
+
+
+# --- Step 3: Exclude Countries with Populist Leaders During Alan García’s Tenure (1985-1990) ---
+```{r exclude-populists-garcia }
+populist_during_garcia <- populist_episodes %>%
+  filter(start_year <= 1990 & end_year >= 1985) %>%
+  pull(iso) %>% unique()
+
+print("Excluded countries (populist leaders 1985-1990):")
+print(populist_during_garcia)
+```
+
+# --- Step 4: Select Control Units ---
+```{r select-control-units-garcia }
+control_data <- pwt_data %>%
+  rename(iso = countrycode) %>%
+  filter(!(iso %in% populist_during_garcia), iso != "PER", year >= 1975, year <= 2000) %>%
+  select(iso, year, rgdppc) %>%
+  left_join(vdem_data, by = c("iso", "year")) %>%
+  left_join(crisis_data, by = c("iso", "year"))
+```
+# --- Step 5: Prepare Data for the Synth Package ---
+```{r prepare-data-for-synth-garcia }
+# Convert ISO to Numeric IDs
+control_data <- control_data %>%
+  mutate(unit_id = as.numeric(as.factor(iso)))
+
+dataprep_data <- bind_rows(garcia_data, control_data) %>%
+  mutate(unit_id = as.numeric(as.factor(iso)))
+
+treatment.identifier <- unique(dataprep_data$unit_id[dataprep_data$iso == "PER"])
+controls.identifier <- setdiff(unique(dataprep_data$unit_id), treatment.identifier)
+
+dataprep_data <- as.data.frame(dataprep_data)
+```
+# --- Step 6: Balance the Panel ---
+```{r balance-panel-garcia }
+
+dataprep_data <- dataprep_data %>%
+  complete(iso, year = 1975:2000, fill = list(rgdppc = NA, v2xel_frefair = NA, v2x_jucon = NA, v2xme_altinf = NA)) %>%
+  group_by(iso) %>%
+  arrange(year) %>%
+  fill(rgdppc, v2xel_frefair, v2x_jucon, v2xme_altinf, .direction = "downup") %>%
+  ungroup()
+
+# Remove PSE from the dataset
+dataprep_data <- dataprep_data %>%
+  filter(iso != "PSE")
+```
+# --- Step 7: Ensure Numeric Unit ID and Data Consistency ---
+```{r numeric-id-garcia }
+
+dataprep_data <- dataprep_data %>%
+  filter(!is.na(rgdppc) & !is.na(v2xel_frefair) & !is.na(v2x_jucon) & !is.na(v2xme_altinf)) %>%
+  mutate(unit_id = as.numeric(unit_id))
+
+# Ensure Alan García’s Peru is uniquely identified
+dataprep_data <- dataprep_data %>%
+  mutate(unit_id = ifelse(iso == "PER", 999, unit_id))
+
+# Check unit_id structure
+print(class(dataprep_data$unit_id))  # Should return "numeric"
+print(any(is.na(dataprep_data$unit_id)))  # Should return FALSE
+print(unique(dataprep_data$unit_id))  # Should show a set of unique numbers
+
+# Ensure only complete cases remain
+dataprep_data <- dataprep_data %>%
+  select(iso, year, rgdppc, v2xel_frefair, v2x_jucon, v2xme_altinf, unit_id)
+
+dataprep_data <- as.data.frame(dataprep_data)
+
+# Summarize by unit_id to check balance
+dataprep_data %>%
+  group_by(unit_id) %>%
+  summarise(min_year = min(year), max_year = max(year), count = n()) %>%
+  arrange(count)
+
+# Keep only countries with complete data (26 years)
+full_units <- dataprep_data %>%
+  group_by(unit_id) %>%
+  summarise(count = n()) %>%
+  filter(count == 26) %>%
+  pull(unit_id)
+
+dataprep_data <- dataprep_data %>%
+  filter(unit_id %in% full_units)
+
+# Final check: No missing values
+print(colSums(is.na(dataprep_data)))  # Should return all zeros
+
+print("Data processing complete.")
+```
+# --- Step 8: Run Synthetic Control Estimation ---
+```{r run-synth-garcia }
+
+treatment.identifier <- unique(dataprep_data$unit_id[dataprep_data$iso == "PER"])
+print(treatment.identifier)  # Should return 999
+
+controls.identifier <- setdiff(unique(dataprep_data$unit_id), treatment.identifier)
+print(controls.identifier)  # Should exclude 999
+
+dataprep.out <- dataprep(
+  foo = dataprep_data,
+  predictors = c("rgdppc", "v2xel_frefair", "v2x_jucon", "v2xme_altinf"),
+  dependent = "rgdppc",
+  unit.variable = "unit_id",
+  time.variable = "year",
+  treatment.identifier = treatment.identifier,
+  controls.identifier = controls.identifier,
+  time.predictors.prior = 1975:1984,
+  time.optimize.ssr = 1975:1984,
+  unit.names.variable = "iso",
+  time.plot = 1975:2000
+)
+
+synth.out <- synth(dataprep.out)
+```
+# --- Step 9: Visualize Results ---
+```{r visualize-results-garcia }
+
+path.plot(synth.out, dataprep.out, Ylab = "GDP per capita", Xlab = "Year", Legend.position = "bottomright")
+```
+# --- Step 10: Save Results ---
+```{r save_results_garcia}
+
+# Extract real and synthetic GDP per capita
+garcia_results <- data.frame(
+  year = dataprep.out$tag$time.plot,
+  actual = dataprep.out$Y1plot,
+  synthetic = dataprep.out$Y0plot %*% synth.out$solution.w,
+  gap = dataprep.out$Y1plot - (dataprep.out$Y0plot %*% synth.out$solution.w)
+)
+
+# Store predictor weights
+garcia_predictor_weights <- data.frame(
+  predictor = rownames(synth.out$solution.v),
+  weight = synth.out$solution.v
+)
+
+# Store country weights for synthetic control
+garcia_country_weights <- data.frame(
+  country = dataprep.out$tag$unit.names[dataprep.out$tag$controls.identifier],
+  weight = synth.out$solution.w
+)
+```
+
+
+
+
+
