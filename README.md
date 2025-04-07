@@ -42,8 +42,7 @@ Michele Andreoni, Marta Cacopardo, Moritz Dassel, Javier Ospital
 
 ## References
 
-Funke, M., Schularick, M., & Trebesch, C. (2023). Populist leaders and the economy. American Economic Review, 113(12), 3249–3288. https://doi.org/10.1257/aer.20211406
+Funke, M., Schularick, M., & Trebesch, C. (2023). Populist leaders and the economy. American Economic Review, 113(12), 3249–3288. 
 
-Rodrik, D. (2018a). Is populism necessarily bad economics? AEA Papers and Proceedings, 108, 196–199. https://doi.org/10.1257/pandp.20181069
-
+Rodrik, D. (2018a). Is populism necessarily bad economics? AEA Papers and Proceedings, 108, 196–199. 
 
