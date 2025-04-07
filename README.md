@@ -17,6 +17,13 @@ This figure shows  GDP gap between the US and its synthetic control.
 
 While FDR shows a clear positive deviation from his synthetic counterfactual, the cases of Lula and García do not yield valid inferences due to poor pre-treatment fit. This suggests that synthetic control may be less effective in contexts where country-specific shocks or limited donor pools constrain the construction of credible counterfactuals. We also find that the results on the case of FDR are robust to country-placebo and time-placebo falsification exercises. 
 
+### Placebo Tests
+
+<div style="display: flex; justify-content: space-around;">
+  <img src="Extension/Figures/country_placebo_fdr.png" alt="Country Placebo" width="45%">
+  <img src="Extension/Figures/time_placebo_fdr.png" alt="Time Placebo" width="45%">
+</div>
+
 ## Contents
 
 - `Populists_leaders.pdf`: Final paper and results
