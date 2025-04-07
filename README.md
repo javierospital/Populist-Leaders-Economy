@@ -42,8 +42,8 @@ Michele Andreoni, Marta Cacopardo, Moritz Dassel, Javier Ospital
 
 ## References
 
-Funke, M., Schularick, M., & Trebesch, C. (2023). Populist leaders and the economy. American Economic Review, 113(1), 324–359. https://doi.org/10.1257/aer.20200799
+Funke, M., Schularick, M., & Trebesch, C. (2023). Populist leaders and the economy. American Economic Review, 113(12), 3249–3288. https://doi.org/10.1257/aer.20211406
 
-Rodrik, D. (2018). Populism and the economics of globalization. Journal of International Business Policy, 1(1–2), 12–33. https://doi.org/10.1057/s42214-018-0001-4
+Rodrik, D. (2018a). Is populism necessarily bad economics? AEA Papers and Proceedings, 108, 196–199. https://doi.org/10.1257/pandp.20181069
 
 
