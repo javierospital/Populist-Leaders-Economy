@@ -10,10 +10,9 @@ This figure shows the average GDP gap between treated countries and their synthe
 
 While results for FDR confirm robust post-treatment performance, the method fails to produce credible synthetic controls for Lula and García due to poor pre-treatment fit. This highlights limitations in the donor pool and underscores the difficulty of evaluating populist regimes in Latin America using existing cross-country data. 
 
-
 ### Results on the case of FDR
-![FDR](Extension/Figures/fdr_gap_plot.png)
-This figure shows  GDP gap between the US and its synthetic control.
+<img src="Extension/Figures/fdr_gap_plot.png" alt="FDR Gap Plot" width="500"/>
+This figure shows the GDP gap between the US and its synthetic control.
 
 While FDR shows a clear positive deviation from his synthetic counterfactual, the cases of Lula and García do not yield valid inferences due to poor pre-treatment fit. This suggests that synthetic control may be less effective in contexts where country-specific shocks or limited donor pools constrain the construction of credible counterfactuals. We also find that the results on the case of FDR are robust to country-placebo and time-placebo falsification exercises. 
 
@@ -27,11 +26,10 @@ While FDR shows a clear positive deviation from his synthetic counterfactual, th
 ## Contents
 
 - `Populists_leaders.pdf`: Final paper and results
-- `PLE_extension_final.Rmd`: Full R Markdown code for replication and extension
-- `PLE_extension_final.html`: Rendered HTML version of the code and results
-- `data/`: All datasets used in the analysis (V-Dem, PWT, JST, crises)
-- `tables/`: Exported LaTeX tables used in the paper
-- `figures/`: (Optional) Visual outputs used in the final paper
+- `PLE_extension_final.Rmd`: Full R Markdown code for extension
+- `PLE_extension_final.html`: Rendered HTML version of the code for extention
+- `Replication`: All datasets, scripts and outputs of the replication
+- `Extension`: All datasets(V-Dem, PWT, JST, crises), scripts and figures used in the extension 
 
 ## Authors
 
