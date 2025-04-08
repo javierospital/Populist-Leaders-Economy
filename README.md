@@ -13,11 +13,13 @@ The extension investigates whether certain populist leaders—classified as demo
 The figure above shows the average GDP gap between treated countries and their synthetic controls. While results for FDR confirm robust post-treatment performance, the method fails to produce credible synthetic controls for Lula and García due to poor pre-treatment fit. This highlights limitations in the donor pool and underscores the difficulty of evaluating populist regimes in Latin America using existing cross-country data. 
 
 
+
 <div align="center">
   <img src="Extension/Figures/fdr_gap_plot.png" alt="FDR Gap Plot" width="500"/>
 </div>
 
 This figure shows the GDP gap between the US and its synthetic control. While FDR shows a clear positive deviation from his synthetic counterfactual, the cases of Lula and García do not yield valid inferences due to poor pre-treatment fit. This suggests that synthetic control may be less effective in contexts where country-specific shocks or limited donor pools constrain the construction of credible counterfactuals. We also find that the results on the case of FDR are robust to country-placebo and time-placebo falsification exercises. 
+
 
 
 <div align="center">
